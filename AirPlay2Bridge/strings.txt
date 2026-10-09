@@ -1,16 +1,16 @@
 # AirPlay2Bridge plugin strings
 
 PLUGIN_AIRPLAY2_BRIDGE
-	ru	AirPlay 2 Bridge (HomePodOS 27+)
-	en	AirPlay 2 Bridge (HomePodOS 27+)
+	ru	AirPlay Bridge
+	en	AirPlay Bridge
 
 PLUGIN_AIRPLAY2_BRIDGE_DESC
-	ru	Мост squeezelite -> pyatv (AirPlay 2) для HomePod на HomePodOS 27+, где легаси-RAOP больше не воспроизводится (LMS-Raop issue #57). Создаёт в LMS обычные squeezelite-плееры и пересылает PCM по AirPlay 2.
-	en	Squeezelite -> pyatv (AirPlay 2) bridge for HomePods on HomePodOS 27+, where legacy RAOP no longer renders audio (LMS-Raop issue #57). Exposes squeezelite players in LMS and forwards PCM over AirPlay 2.
+	ru	Использование HomePod с OS 27 в LMS
+	en	Use HomePods OS 27 in LMS
 
 AIRPLAY2BRIDGE_SETTINGS
-	ru	AirPlay 2 Bridge
-	en	AirPlay 2 Bridge
+	ru	AirPlay Bridge
+	en	AirPlay Bridge
 
 AIRPLAY2BRIDGE_DEVICES
 	ru	Устройства AirPlay

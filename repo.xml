@@ -26,16 +26,16 @@
             target="unix|mac"
             minTarget="8.0"
             maxTarget="*"
-            sha="520d7164e07486bb83d7edd89168173b46df759a"
+            sha="32ef9ec9a0085a60ef3e0d8ef0e4b7cac84cbfd9"
             url="https://github.com/knovash/airplay/releases/download/v1.3/AirPlay2Bridge-v1.3.zip"
             icon="https://raw.githubusercontent.com/knovash/airplay/main/AirPlay2Bridge/HTML/EN/plugins/AirPlay2Bridge/html/images/icon.png"
             creator="Konstantin"
             email="novash.ki@gmail.com"
         >
-            <title lang="EN">AirPlay 2 Bridge (HomePodOS 27+)</title>
-            <title lang="RU">AirPlay 2 Bridge (HomePodOS 27+)</title>
-            <desc lang="EN">Squeezelite -&gt; pyatv (AirPlay 2) bridge for HomePods on HomePodOS 27+, where legacy RAOP no longer renders audio (LMS-Raop issue #57). Exposes regular squeezelite players in LMS; discovery scan + checkboxes in settings. Requires python3 + pyatv 0.18 and a patched squeezelite (see README).</desc>
-            <desc lang="RU">Мост squeezelite -&gt; pyatv (AirPlay 2) для HomePod на HomePodOS 27+, где легаси-RAOP больше не воспроизводится (LMS-Raop issue #57). Создаёт в LMS обычные squeezelite-плееры; в настройках скан устройств с галочками. Требуются python3 + pyatv 0.18 и патченый squeezelite (см. README).</desc>
+            <title lang="EN">AirPlay Bridge</title>
+            <title lang="RU">AirPlay Bridge</title>
+            <desc lang="EN">Use HomePods OS 27 in LMS</desc>
+            <desc lang="RU">Использование HomePod с OS 27 в LMS</desc>
         </plugin>
     </plugins>
 </extensions>

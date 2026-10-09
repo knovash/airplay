@@ -9,6 +9,12 @@
 	[% IF scanerror %]
 		<div class="prefIntro" style="color:red">[% "AIRPLAY2BRIDGE_SCANERROR" | string %]: [% scanerror %]</div>
 	[% END %]
+	[% IF restarted %]
+		<div class="prefIntro">[% "AIRPLAY2BRIDGE_RESTARTED" | string %]</div>
+	[% END %]
+	[% IF resetdone %]
+		<div class="prefIntro">[% "AIRPLAY2BRIDGE_RESET_DONE" | string %]</div>
+	[% END %]
 
 	[% WRAPPER setting title="AIRPLAY2BRIDGE_DEVICES" desc="AIRPLAY2BRIDGE_DEVICES_DESC" %]
 		<p>
@@ -47,6 +53,14 @@
 		[% ELSE %]
 		<p><span class="prefDesc">[% 'AIRPLAY2BRIDGE_NO_DEVICES' | string %]</span></p>
 		[% END %]
+	[% END %]
+
+	[% WRAPPER setting title="AIRPLAY2BRIDGE_CONTROL" desc="AIRPLAY2BRIDGE_CONTROL_DESC" %]
+		<input name="restartSettings" type="submit" value="[% 'AIRPLAY2BRIDGE_RESTART' | string %]"
+			onclick="return confirm('[% 'AIRPLAY2BRIDGE_RESTART_CONFIRM' | string %]')">
+		&nbsp;
+		<input name="resetSettings" type="submit" style="color:red" value="[% 'AIRPLAY2BRIDGE_RESET' | string %]"
+			onclick="return confirm('[% 'AIRPLAY2BRIDGE_RESET_CONFIRM' | string %]')">
 	[% END %]
 
 	[% WRAPPER setting title="AIRPLAY2BRIDGE_ENABLED" desc="AIRPLAY2BRIDGE_ENABLED_DESC" %]

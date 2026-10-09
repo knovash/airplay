@@ -95,3 +95,35 @@ AIRPLAY2BRIDGE_LMSIP_DESC
 AIRPLAY2BRIDGE_SAVED
 	ru	Настройки сохранены, мосты перезапущены.
 	en	Settings saved, bridges restarted.
+
+AIRPLAY2BRIDGE_CONTROL
+	ru	Управление мостами
+	en	Bridge control
+
+AIRPLAY2BRIDGE_CONTROL_DESC
+	ru	Перезапуск мостов применяет настройку без рестарта LMS. Сброс очищает список устройств и плееров (мосты останавливаются, пути python/squeezelite не меняются) — после сброса нажмите «Найти устройства» и отметьте HomePods заново.
+	en	Restart bridges applies the configuration without restarting LMS. Reset clears the device and player list (bridges stop, python/squeezelite paths are kept) - press "Start Discovery Scan" and tick your HomePods again afterwards.
+
+AIRPLAY2BRIDGE_RESTART
+	ru	Перезапустить мосты
+	en	Restart bridges
+
+AIRPLAY2BRIDGE_RESTART_CONFIRM
+	ru	Перезапустить мосты? Воспроизведение на HomePod прервётся на несколько секунд.
+	en	Restart bridges? Playback on HomePods will pause for a few seconds.
+
+AIRPLAY2BRIDGE_RESTARTED
+	ru	Мосты перезапущены.
+	en	Bridges restarted.
+
+AIRPLAY2BRIDGE_RESET
+	ru	Сброс настроек
+	en	Reset settings
+
+AIRPLAY2BRIDGE_RESET_CONFIRM
+	ru	Полностью сбросить список устройств и плееров? Мосты остановятся. После сброса нужно заново нажать «Найти устройства» и отметить HomePods.
+	en	Reset the device and player list completely? Bridges will stop. You will need to press "Start Discovery Scan" and tick your HomePods again.
+
+AIRPLAY2BRIDGE_RESET_DONE
+	ru	Настройки сброшены. Нажмите «Найти устройства», чтобы заново найти HomePods.
+	en	Settings reset. Press "Start Discovery Scan" to discover your HomePods again.

@@ -135,8 +135,9 @@ sub _mergeScan {
 sub handler {
 	my ($class, $client, $paramRef, $callback, @args) = @_;
 
-	# ВАЖНО: footer формы всегда шлёт hidden saveSettings=1, поэтому Scan-клик
-	# (submit scanSettings) обрабатываем ПЕРВЫМ и не выполняем сохранение
+	# ВАЖНО: footer формы всегда шлёт hidden saveSettings=1, поэтому служебные кнопки
+	# (Scan/Restart/Reset, submit scanSettings/restartSettings/resetSettings)
+	# обрабатываем ПЕРВЫМИ и не выполняем сохранение
 	if ($paramRef->{'scanSettings'}) {
 		my ($out, $err) = _runScan();
 		if ($err) {
@@ -147,6 +148,23 @@ sub handler {
 			_mergeScan($out);
 			$paramRef->{'scanned'} = 1;
 		}
+	}
+	elsif ($paramRef->{'restartSettings'}) {
+		require Plugins::AirPlay2Bridge::BridgeProcess;
+		$log->warn('restart requested from settings page');
+		Plugins::AirPlay2Bridge::BridgeProcess->restartAll;
+		$paramRef->{'restarted'} = 1;
+	}
+	elsif ($paramRef->{'resetSettings'}) {
+		# Полный сброс: стоп мостов + очистка списка устройств и плееров.
+		# Пути python/bridge.py/squeezelite/LMS НЕ трогаем (инфраструктура хоста).
+		# После сброса пользователь заново жмёт «Найти устройства» и отмечает HomePods.
+		require Plugins::AirPlay2Bridge::BridgeProcess;
+		Plugins::AirPlay2Bridge::BridgeProcess->stopAll;
+		$prefs->remove('devices');
+		$prefs->remove('players');
+		$log->warn('AirPlay2Bridge: settings reset (devices/players cleared)');
+		$paramRef->{'resetdone'} = 1;
 	}
 	elsif ($paramRef->{'saveSettings'}) {
 		my $old = _currentDevices();

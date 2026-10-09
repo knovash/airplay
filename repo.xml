@@ -6,7 +6,7 @@
 
     USERS: Add the raw GitHub URL of this file to:
       LMS Settings -> Plugins -> Additional Repositories
-      URL: https://raw.githubusercontent.com/knovash/airplay2/main/repo.xml
+      URL: https://raw.githubusercontent.com/knovash/airplay/main/repo.xml
 
     MAINTAINERS: When publishing a new version:
       1) bump <version> in AirPlay2Bridge/install.xml and here
@@ -27,8 +27,8 @@
             minTarget="8.0"
             maxTarget="*"
             sha="c69c0e8464188226ddca8d9d9645dcef9e34e528"
-            url="https://github.com/knovash/airplay2/releases/download/v1.1/AirPlay2Bridge-v1.1.zip"
-            icon="https://raw.githubusercontent.com/knovash/airplay2/main/AirPlay2Bridge/HTML/EN/plugins/AirPlay2Bridge/html/images/icon.png"
+            url="https://github.com/knovash/airplay/releases/download/v1.1/AirPlay2Bridge-v1.1.zip"
+            icon="https://raw.githubusercontent.com/knovash/airplay/main/AirPlay2Bridge/HTML/EN/plugins/AirPlay2Bridge/html/images/icon.png"
             creator="Konstantin"
             email="novash.ki@gmail.com"
         >

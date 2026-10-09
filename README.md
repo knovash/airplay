@@ -32,7 +32,7 @@ cd AirPlay2Bridge/patches && bash build_squeezelite.sh   # -> /usr/local/bin/squ
 
 **From this repository** (LMS 8+):
 1. LMS Settings → Plugins → Additional Repositories, add:
-   `https://raw.githubusercontent.com/knovash/airplay2/main/repo.xml`
+   `https://raw.githubusercontent.com/knovash/airplay/main/repo.xml`
 2. Find **AirPlay 2 Bridge (HomePodOS 27+)** in the plugin list → Install.
 3. LMS Settings → Plugins → AirPlay 2 Bridge → **Start Discovery Scan** →
    tick your HomePods → Save. Done.

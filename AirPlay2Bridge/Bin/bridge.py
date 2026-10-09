@@ -33,6 +33,12 @@ RAOP_PORT = 7000
 # Force ManualService with explicit AP2 props (bypass mDNS TXT records)
 FORCE_MANUAL = os.environ.get("FORCE_MANUAL", "") == "1"
 
+# Volume curve LMS % -> HomePod %: pyatv maps 0-100% LINEARLY to -30..0 dBFS
+# (pct_to_dbfs), so passing LMS mixer % directly makes mid values very quiet
+# (35% = -19.5 dB ~ 1/10 of max, 70% = -9 dB ~ half). Perceptual power curve:
+# 100->100 (0 dB), 70->81, 50->66 (~-10 dB = subjective half), 35->55, 20->41.
+VOLUME_CURVE = float(os.environ.get("VOLUME_CURVE", "0.6"))
+
 # Explicit AirPlay 2 RAOP TXT props so pyatv selects AirPlayV2 + TRANSIENT
 # credentials (HAP Pair-Verify + ChaCha20). Empty {} => unencrypted AirPlayV1
 # which HomePodOS 27+ rejects (the root cause of issue #57).
@@ -134,13 +140,19 @@ class HomePodBridge:
         self.running = True
         self.is_idle = True
         self.is_streaming = False
-        self.current_volume = 30.0
+        self.current_volume = 30.0   # pyatv/HomePod scale (mapped from LMS by VOLUME_CURVE)
+        self.lms_volume = None       # last LMS mixer % (raw)
         self.audio_buffer = bytearray()
         self.last_audio_time = 0.0
         self.wake_event = asyncio.Event()
         self.proc = None   # squeezelite
         self.atv = None    # pyatv AppleTV
         self._cli_writer = None  # LMS CLI subscription (closed on stop)
+
+    def map_volume(self, lms_vol):
+        """LMS mixer % -> pyatv/HomePod % (perceptual curve, see VOLUME_CURVE)."""
+        v = max(0.0, min(100.0, float(lms_vol)))
+        return 100.0 * (v / 100.0) ** VOLUME_CURVE
 
     # ---------- LMS CLI ----------
     async def lms_cli_open(self):
@@ -300,10 +312,12 @@ class HomePodBridge:
                     if text.startswith(self.mac_lms) and "mixer volume" in text:
                         try:
                             vol = float(text.rsplit(" ", 1)[-1])
-                            self.current_volume = max(0.0, min(100.0, vol))
+                            self.lms_volume = max(0.0, min(100.0, vol))
+                            self.current_volume = self.map_volume(self.lms_volume)
                             if self.atv:
                                 await self.atv.audio.set_volume(self.current_volume)
-                                _LOGGER.info("%s: volume=%.0f", self.name, self.current_volume)
+                                _LOGGER.info("%s: volume=%.0f (lms=%.0f)",
+                                             self.name, self.current_volume, self.lms_volume)
                         except ValueError:
                             pass
                 w.close()

@@ -22,12 +22,12 @@
     <plugins>
         <plugin
             name="AirPlay2Bridge"
-            version="1.1"
+            version="1.2"
             target="unix|mac"
             minTarget="8.0"
             maxTarget="*"
-            sha="c69c0e8464188226ddca8d9d9645dcef9e34e528"
-            url="https://github.com/knovash/airplay/releases/download/v1.1/AirPlay2Bridge-v1.1.zip"
+            sha="43803bf5c30227badf3f4555d25ed16296f8e1f8"
+            url="https://github.com/knovash/airplay/releases/download/v1.2/AirPlay2Bridge-v1.2.zip"
             icon="https://raw.githubusercontent.com/knovash/airplay/main/AirPlay2Bridge/HTML/EN/plugins/AirPlay2Bridge/html/images/icon.png"
             creator="Konstantin"
             email="novash.ki@gmail.com"

@@ -9,7 +9,7 @@ ZIP="dist/AirPlay2Bridge-v${VER}.zip"
 
 rm -rf dist
 mkdir -p dist
-zip -r "$ZIP" AirPlay2Bridge -x "*.DS_Store"
+zip -r "$ZIP" AirPlay2Bridge -x "*.DS_Store" "*__pycache__*" "*.pyc"
 echo
 echo "ZIP: $ZIP"
 echo "sha1: $(sha1sum "$ZIP" | cut -d' ' -f1)"

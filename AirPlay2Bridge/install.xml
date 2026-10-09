@@ -8,7 +8,7 @@
   </targetApplication>
   <creator>Konstantin</creator>
   <icon>plugins/AirPlay2Bridge/html/images/icon.png</icon>
-  <version>1.1</version>
+  <version>1.2</version>
   <name>PLUGIN_AIRPLAY2_BRIDGE</name>
   <description>PLUGIN_AIRPLAY2_BRIDGE_DESC</description>
   <defaultState>enabled</defaultState>

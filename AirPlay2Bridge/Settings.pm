@@ -10,6 +10,7 @@ use strict;
 use base qw(Slim::Web::Settings);
 
 use Slim::Utils::Log;
+use Slim::Utils::PluginManager;
 use Slim::Utils::Prefs;
 
 my $prefs = preferences('plugin.airplay2bridge');
@@ -220,6 +221,10 @@ sub handler {
 	for my $key (qw(enabled pythonpath bridgebin squeezelite lmsip)) {
 		$paramRef->{"pref_$key"} = $prefs->get($key);
 	}
+
+	# версия плагина для футера страницы (из install.xml через PluginManager)
+	my $allPlugins = Slim::Utils::PluginManager->allPlugins;
+	$paramRef->{'pluginversion'} = $allPlugins->{'AirPlay2Bridge'}->{'version'} || '';
 
 	return $class->SUPER::handler($client, $paramRef, $callback, @args);
 }

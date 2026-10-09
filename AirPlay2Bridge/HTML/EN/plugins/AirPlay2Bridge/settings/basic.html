@@ -1,0 +1,72 @@
+[% PROCESS settings/header.html %]
+
+	[% IF validated %]
+		<div class="prefIntro">[% "AIRPLAY2BRIDGE_SAVED" | string %]</div>
+	[% END %]
+	[% IF scanned %]
+		<div class="prefIntro">[% "AIRPLAY2BRIDGE_SCANNED" | string %]</div>
+	[% END %]
+	[% IF scanerror %]
+		<div class="prefIntro" style="color:red">[% "AIRPLAY2BRIDGE_SCANERROR" | string %]: [% scanerror %]</div>
+	[% END %]
+
+	[% WRAPPER setting title="AIRPLAY2BRIDGE_DEVICES" desc="AIRPLAY2BRIDGE_DEVICES_DESC" %]
+		<p>
+			<input name="scanSettings" type="submit" value="[% 'AIRPLAY2BRIDGE_SCAN' | string %]">
+			&nbsp;<span class="prefDesc">[% 'AIRPLAY2BRIDGE_SCAN_HINT' | string %]</span>
+		</p>
+		[% IF devices.size %]
+		<table style="width:100%; border-collapse:collapse">
+			<tr>
+				<th style="text-align:left; padding:2px 6px"></th>
+				<th style="text-align:left; padding:2px 6px">[% 'AIRPLAY2BRIDGE_DEV_NAME' | string %]</th>
+				<th style="text-align:left; padding:2px 6px">IP</th>
+				<th style="text-align:left; padding:2px 6px">AirPlay ID</th>
+				<th style="text-align:left; padding:2px 6px">MAC</th>
+				<th style="text-align:left; padding:2px 6px">[% 'AIRPLAY2BRIDGE_DEV_MODEL' | string %]</th>
+			</tr>
+			[% FOREACH d IN devices %]
+			<tr [% IF d.absent %]style="color:#999"[% END %]>
+				<td style="padding:2px 6px">
+					<input type="checkbox" name="dev_enable_[% d.id %]" id="dev_[% d.id %]" value="1" [% IF d.enabled %]checked[% END %] />
+				</td>
+				<td style="padding:2px 6px">
+					<input type="text" class="stdedit" name="dev_name_[% d.id %]" value="[% d.name | html %]" size="16" />
+					[% IF d.warn %]<span style="color:#f60" title="duplicate"> &laquo;!&raquo;</span>[% END %]
+					[% IF d.absent %]<span style="color:#999"> [% 'AIRPLAY2BRIDGE_DEV_OFFLINE' | string %]</span>[% END %]
+					<input type="hidden" name="dev_ip_[% d.id %]" value="[% d.ip %]" />
+					<input type="hidden" name="dev_mac_[% d.id %]" value="[% d.mac %]" />
+				</td>
+				<td style="padding:2px 6px">[% d.ip %]</td>
+				<td style="padding:2px 6px">[% d.id %]</td>
+				<td style="padding:2px 6px">[% d.mac %]</td>
+				<td style="padding:2px 6px">[% d.model %][% IF d.ov %] (OS [% d.ov %])[% END %]</td>
+			</tr>
+			[% END %]
+		</table>
+		[% ELSE %]
+		<p><span class="prefDesc">[% 'AIRPLAY2BRIDGE_NO_DEVICES' | string %]</span></p>
+		[% END %]
+	[% END %]
+
+	[% WRAPPER setting title="AIRPLAY2BRIDGE_ENABLED" desc="AIRPLAY2BRIDGE_ENABLED_DESC" %]
+		<input type="checkbox" name="pref_enabled" id="pref_enabled" [% IF pref_enabled %]checked[% END %] value="1" />
+	[% END %]
+
+	[% WRAPPER setting title="AIRPLAY2BRIDGE_PYTHONPATH" desc="AIRPLAY2BRIDGE_PYTHONPATH_DESC" %]
+		<input type="text" name="pref_pythonpath" id="pref_pythonpath" size="50" value="[% pref_pythonpath | html %]" />
+	[% END %]
+
+	[% WRAPPER setting title="AIRPLAY2BRIDGE_BRIDGEBIN" desc="AIRPLAY2BRIDGE_BRIDGEBIN_DESC" %]
+		<input type="text" name="pref_bridgebin" id="pref_bridgebin" size="50" value="[% pref_bridgebin | html %]" />
+	[% END %]
+
+	[% WRAPPER setting title="AIRPLAY2BRIDGE_SQUEEZELITE" desc="AIRPLAY2BRIDGE_SQUEEZELITE_DESC" %]
+		<input type="text" name="pref_squeezelite" id="pref_squeezelite" size="50" value="[% pref_squeezelite | html %]" />
+	[% END %]
+
+	[% WRAPPER setting title="AIRPLAY2BRIDGE_LMSIP" desc="AIRPLAY2BRIDGE_LMSIP_DESC" %]
+		<input type="text" name="pref_lmsip" id="pref_lmsip" size="20" value="[% pref_lmsip | html %]" />
+	[% END %]
+
+[% PROCESS settings/footer.html %]

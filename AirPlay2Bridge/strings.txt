@@ -1,0 +1,97 @@
+# AirPlay2Bridge plugin strings
+
+PLUGIN_AIRPLAY2_BRIDGE
+	ru	AirPlay 2 Bridge (HomePodOS 27+)
+	en	AirPlay 2 Bridge (HomePodOS 27+)
+
+PLUGIN_AIRPLAY2_BRIDGE_DESC
+	ru	Мост squeezelite -> pyatv (AirPlay 2) для HomePod на HomePodOS 27+, где легаси-RAOP больше не воспроизводится (LMS-Raop issue #57). Создаёт в LMS обычные squeezelite-плееры и пересылает PCM по AirPlay 2.
+	en	Squeezelite -> pyatv (AirPlay 2) bridge for HomePods on HomePodOS 27+, where legacy RAOP no longer renders audio (LMS-Raop issue #57). Exposes squeezelite players in LMS and forwards PCM over AirPlay 2.
+
+AIRPLAY2BRIDGE_SETTINGS
+	ru	AirPlay 2 Bridge
+	en	AirPlay 2 Bridge
+
+AIRPLAY2BRIDGE_DEVICES
+	ru	Устройства AirPlay
+	en	AirPlay devices
+
+AIRPLAY2BRIDGE_DEVICES_DESC
+	ru	Скан находит AirPlay-устройства в сети. Отметьте галочками те, которые должны стать плеерами LMS; имя можно поправить. MAC существующих плееров сохраняется (наследование плейлистов и синкгрупп).
+	en	Scan discovers AirPlay devices on the network. Check the ones to expose as LMS players; names are editable. Existing player MACs are preserved (playlist/sync-group inheritance).
+
+AIRPLAY2BRIDGE_SCAN
+	ru	Найти устройства
+	en	Start Discovery Scan
+
+AIRPLAY2BRIDGE_SCAN_HINT
+	ru	~10 секунд. Новые устройства добавляются выключенными.
+	en	takes ~10 seconds. Newly found devices are added unchecked.
+
+AIRPLAY2BRIDGE_SCANNED
+	ru	Скан завершён, список обновлён.
+	en	Scan finished, list updated.
+
+AIRPLAY2BRIDGE_SCANERROR
+	ru	Ошибка скана
+	en	Scan error
+
+AIRPLAY2BRIDGE_DEV_NAME
+	ru	Имя плеера
+	en	Player name
+
+AIRPLAY2BRIDGE_DEV_MODEL
+	ru	Модель
+	en	Model
+
+AIRPLAY2BRIDGE_DEV_OFFLINE
+	ru	(не найден при последнем скане)
+	en	(not seen in last scan)
+
+AIRPLAY2BRIDGE_NO_DEVICES
+	ru	Устройства не настроены — нажмите «Найти устройства» или сохраните настройки.
+	en	No devices configured - press "Start Discovery Scan" or save settings.
+
+AIRPLAY2BRIDGE_ENABLED
+	ru	Запускать мосты автоматически
+	en	Start bridges automatically
+
+AIRPLAY2BRIDGE_ENABLED_DESC
+	ru	Мосты для отмеченных устройств запускаются при старте LMS и перезапускаются при падении (проверка раз в 30 секунд).
+	en	Bridges for checked devices start with LMS and restart if crashed (checked every 30 seconds).
+
+AIRPLAY2BRIDGE_PYTHONPATH
+	ru	Путь к python3
+	en	Path to python3
+
+AIRPLAY2BRIDGE_PYTHONPATH_DESC
+	ru	Python с установленным pyatv (pip3 install pyatv==0.18.0).
+	en	Python with pyatv installed (pip3 install pyatv==0.18.0).
+
+AIRPLAY2BRIDGE_BRIDGEBIN
+	ru	Путь к bridge.py (пусто = Bin/bridge.py из плагина)
+	en	Path to bridge.py (empty = plugin's Bin/bridge.py)
+
+AIRPLAY2BRIDGE_BRIDGEBIN_DESC
+	ru	Свой путь к скрипту моста, если нужно.
+	en	Custom path to the bridge script if needed.
+
+AIRPLAY2BRIDGE_SQUEEZELITE
+	ru	Путь к патченому squeezelite (stdout, silence-skip)
+	en	Path to patched squeezelite (stdout, silence-skip)
+
+AIRPLAY2BRIDGE_SQUEEZELITE_DESC
+	ru	Собирается patches/build_squeezelite.sh (обычно /usr/local/bin/squeezelite-ap2).
+	en	Built by patches/build_squeezelite.sh (usually /usr/local/bin/squeezelite-ap2).
+
+AIRPLAY2BRIDGE_LMSIP
+	ru	IP LMS для squeezelite/CLI
+	en	LMS IP for squeezelite/CLI
+
+AIRPLAY2BRIDGE_LMSIP_DESC
+	ru	Как правило 127.0.0.1 (мосты на том же хосте).
+	en	Usually 127.0.0.1 (bridges on the same host).
+
+AIRPLAY2BRIDGE_SAVED
+	ru	Настройки сохранены, мосты перезапущены.
+	en	Settings saved, bridges restarted.

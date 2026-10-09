@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    LMS Custom Repository descriptor for AirPlay2Bridge.
+    Живёт в КОРНЕ проекта и пушится в корень репозитория как есть —
+    LMS читает его по raw-URL ветки main.
+
+    USERS: Add the raw GitHub URL of this file to:
+      LMS Settings -> Plugins -> Additional Repositories
+      URL: https://raw.githubusercontent.com/knovash/airplay2/main/repo.xml
+
+    MAINTAINERS: When publishing a new version:
+      1) bump <version> in AirPlay2Bridge/install.xml and here
+      2) ./make_dist.sh  -> dist/AirPlay2Bridge-vX.Y.zip (prints sha1)
+      3) create GitHub release vX.Y, upload the zip as asset
+      4) update sha= and url= below
+-->
+<extensions>
+    <details>
+        <title lang="EN">AirPlay2Bridge Repository</title>
+        <title lang="RU">Репозиторий AirPlay2Bridge</title>
+    </details>
+    <plugins>
+        <plugin
+            name="AirPlay2Bridge"
+            version="1.1"
+            target="unix|mac"
+            minTarget="8.0"
+            maxTarget="*"
+            sha="TBD"
+            url="https://github.com/knovash/airplay2/releases/download/v1.1/AirPlay2Bridge-v1.1.zip"
+            icon="https://raw.githubusercontent.com/knovash/airplay2/main/AirPlay2Bridge/HTML/EN/plugins/AirPlay2Bridge/html/images/icon.png"
+            creator="Konstantin"
+            email="novash.ki@gmail.com"
+        >
+            <title lang="EN">AirPlay 2 Bridge (HomePodOS 27+)</title>
+            <title lang="RU">AirPlay 2 Bridge (HomePodOS 27+)</title>
+            <desc lang="EN">Squeezelite -&gt; pyatv (AirPlay 2) bridge for HomePods on HomePodOS 27+, where legacy RAOP no longer renders audio (LMS-Raop issue #57). Exposes regular squeezelite players in LMS; discovery scan + checkboxes in settings. Requires python3 + pyatv 0.18 and a patched squeezelite (see README).</desc>
+            <desc lang="RU">Мост squeezelite -&gt; pyatv (AirPlay 2) для HomePod на HomePodOS 27+, где легаси-RAOP больше не воспроизводится (LMS-Raop issue #57). Создаёт в LMS обычные squeezelite-плееры; в настройках скан устройств с галочками. Требуются python3 + pyatv 0.18 и патченый squeezelite (см. README).</desc>
+        </plugin>
+    </plugins>
+</extensions>

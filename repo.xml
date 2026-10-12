@@ -26,7 +26,7 @@
             target="unix|mac"
             minTarget="8.0"
             maxTarget="*"
-            sha="6262db6b88ee635f0ef86975944a9d963876724c"
+            sha="95fe492e38777a366b772f3c26c9609df03ebe9a"
             url="https://github.com/knovash/airplay/releases/download/v1.3/AirPlay2Bridge-v1.3.zip"
             icon="https://raw.githubusercontent.com/knovash/airplay/main/AirPlay2Bridge/HTML/EN/plugins/AirPlay2Bridge/html/images/icon.png"
             creator="Konstantin"

@@ -14,6 +14,7 @@ import asyncio
 import ipaddress
 import logging
 import os
+import plistlib
 import re
 import signal
 import sys
@@ -27,6 +28,7 @@ from pyatv.protocols.raop.audio_source import AudioSource
 import pyatv.protocols.raop as raop
 import pyatv.protocols.raop.audio_source as audio_source
 import pyatv.support.http as pyatv_http
+from pyatv.protocols.airplay.channels import EventChannel
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO").upper(),
                     format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
@@ -128,6 +130,89 @@ def _patched_parse_response(buffer):
 
 pyatv_http.parse_response = _patched_parse_response
 
+# ---- device volume feedback via AirPlay 2 EventChannel ----
+# pyatv opens an encrypted event channel to the receiver; the receiver pushes
+# RTSP SET_PARAMETER requests there (e.g. body "volume: -15.000000" when the
+# user changes volume on the device with buttons/Siri). pyatv's EventChannel
+# answers 200 OK and DISCARDS the content — so we wrap handle_received and
+# feed volume events into the bridge before the original consumes the buffer.
+_orig_event_handle_received = EventChannel.handle_received
+_EVENT_VOLUME_RE = re.compile(rb"volume\s*:\s*(-?\d+(?:\.\d+)?)", re.I)
+
+
+def _iter_event_plists(buf):
+    """Yield plist dicts found in the event channel buffer (frames are
+    RTSP requests with binary plist bodies: {type, value, ...})."""
+    idx = buf.find(b"bplist00")
+    while idx >= 0:
+        try:
+            obj = plistlib.loads(buf[idx:])
+            if isinstance(obj, dict):
+                yield obj
+        except Exception:
+            pass
+        idx = buf.find(b"bplist00", idx + 8)
+
+
+def _device_dbfs_from_plist(obj):
+    """Extract device volume (dBFS, -30..0) from an event plist, if present.
+    Shapes seen on HomePodOS 27:
+      - {'type': 'updateInfo', 'value': {... 'initialVolume': -21.0}}  (session start)
+      - {'type': 'sendMediaRemoteCommand', 'value': 'dvlc',
+         'volume': 0.8, 'params': {'volume': 0.8}}                     (buttons/Siri,
+         linear 0..1, one button step = 0.05)
+    """
+    t = obj.get("type")
+    v = obj.get("value")
+    ts = t.decode("ascii", "replace") if isinstance(t, bytes) else str(t or "")
+    if ts == "sendMediaRemoteCommand" and v in ("dvlc", b"dvlc"):
+        frac = obj.get("volume")
+        if not isinstance(frac, (int, float)) or isinstance(frac, bool):
+            params = obj.get("params")
+            frac = params.get("volume") if isinstance(params, dict) else None
+        if isinstance(frac, (int, float)) and not isinstance(frac, bool):
+            return float(frac) * 30.0 - 30.0   # linear 0..1 -> dBFS
+    if isinstance(v, dict):
+        iv = v.get("initialVolume")
+        if isinstance(iv, (int, float)) and not isinstance(iv, bool):
+            return float(iv)
+        for key in ("volume", "Volume"):
+            x = v.get(key)
+            if isinstance(x, (int, float)) and not isinstance(x, bool):
+                return float(x)
+    elif isinstance(v, (int, float)) and not isinstance(v, bool) and "vol" in ts.lower():
+        return float(v)
+    return None
+
+
+def _patched_event_handle_received(self):
+    try:
+        bridge = _ACTIVE_BRIDGE
+        buf = self.buffer
+        if buf:
+            printable = bytes(c if 32 <= c < 127 or c in (10, 13, 9) else 46
+                              for c in buf[:400]).decode("ascii", "replace")
+            _LOGGER.info("%s: EVENT frame (%d B): %s",
+                         bridge.name if bridge else "?", len(buf), printable)
+            for obj in _iter_event_plists(buf):
+                _LOGGER.info("%s: EVENT plist type=%r", bridge.name if bridge else "?",
+                             obj.get("type"))
+                dbfs = _device_dbfs_from_plist(obj)
+                if dbfs is not None and bridge:
+                    pct = max(0.0, min(100.0, (dbfs + 30.0) * 100.0 / 30.0))
+                    bridge.on_device_volume(pct, dbfs)
+            m = _EVENT_VOLUME_RE.search(buf)
+            if m and bridge:
+                dbfs = float(m.group(1))          # -30..0 dBFS (pyatv scale)
+                pct = max(0.0, min(100.0, (dbfs + 30.0) * 100.0 / 30.0))
+                bridge.on_device_volume(pct, dbfs)
+    except Exception as e:
+        _LOGGER.debug("event channel scan failed: %s", e)
+    return _orig_event_handle_received(self)
+
+
+EventChannel.handle_received = _patched_event_handle_received
+
 
 def le2be(chunk: bytes) -> bytes:
     """16-bit LE PCM -> BE (RAOP wire format)."""
@@ -225,7 +310,7 @@ class HomePodBridge:
         return 100.0 * (v / 100.0) ** VOLUME_CURVE
 
     def on_device_volume(self, pct, dbfs):
-        """Volume change reported BY the device (buttons/Siri) — experimental."""
+        """Volume change reported BY the device (buttons/Siri) via EventChannel."""
         self.device_volume = pct
         self.vol_source = "device"
         drift = abs(pct - self.current_volume)
@@ -233,6 +318,20 @@ class HomePodBridge:
                      f" [drift {drift:.1f} vs bridge {self.current_volume:.1f}]"
                      if drift > 2.0 else "")
         self.write_state()
+        # Reflect physical changes back into the LMS mixer (reverse curve), so the
+        # LMS slider follows the buttons. Guard >2% prevents an echo loop
+        # (device -> LMS -> device -> ... converges because mapping is idempotent
+        # up to rounding). Disable with DEVICE_TO_LMS=0.
+        if os.environ.get("DEVICE_TO_LMS", "1") != "1":
+            return
+        try:
+            lms_target = 100.0 * (pct / 100.0) ** (1.0 / VOLUME_CURVE)
+            if self.lms_volume is None or abs(lms_target - self.lms_volume) > 2.0:
+                asyncio.get_running_loop().create_task(
+                    self.lms_cli_one(f"{self.mac_cli} mixer volume {round(lms_target)}"))
+                _LOGGER.info("%s: device volume -> LMS mixer %.0f", self.name, lms_target)
+        except RuntimeError:
+            pass  # no running loop (shutdown)
 
     def write_state(self):
         """Dump status for the LMS settings page (BRIDGE_STATE, key=value, atomic)."""
@@ -407,12 +506,13 @@ class HomePodBridge:
     async def sync_volume_lms(self):
         # dVC=0: LMS mixer does not attenuate PCM (avoid double attenuation with
         # HomePod volume); re-sent on every reconnect since player may register late
+        # NB: CLI commands require the id WITH colons (colonless form is ignored!)
         while self.running:
             try:
-                await self.lms_cli_one(f"{self.mac_lms} playerpref digitalVolumeControl 0")
+                await self.lms_cli_one(f"{self.mac_cli} playerpref digitalVolumeControl 0")
                 r, w = await self.lms_cli_open()
                 self._cli_writer = w
-                w.write(f"{self.mac_lms} mixer volume ?\n".encode()); await w.drain()
+                w.write(f"{self.mac_cli} mixer volume ?\n".encode()); await w.drain()
                 w.write("subscribe mixer\n".encode()); await w.drain()
                 _LOGGER.info("%s: subscribed to LMS mixer events", self.name)
                 while self.running:

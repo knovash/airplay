@@ -3,7 +3,8 @@ package Plugins::AirPlay2Bridge::BridgeProcess;
 # Управление python-процессами моста (bridge.py) — по одному на каждый HomePod.
 # Формат настройки players (одна строка = один плеер):
 #   name,player_mac,airplay_id,homepod_ip
-# Запуск: python3 -u bridge.py name mac airplay_id ip 127.0.0.1 (SQUEEZELITE_BIN=...)
+# Запуск: python3 -u bridge.py name mac airplay_id ip 127.0.0.1 (SQUEEZELITE_BIN=...,
+#   BRIDGE_STATE=<dataDir>/bridge-<MACID>.state — статус-файл громкости для Settings)
 # Контроль: pid-файл на плеер + kill 0, автоперезапуск таймером beat() каждые 30 с.
 
 use strict;
@@ -66,6 +67,7 @@ sub playerList {
 			host  => $host,
 			pid   => catfile(dataDir(), "bridge-$macid.pid"),
 			log   => catfile(dataDir(), "bridge-$macid.log"),
+			state => catfile(dataDir(), "bridge-$macid.state"),
 		};
 	}
 	return \@out;
@@ -128,7 +130,7 @@ sub _startOne {
 	my $lmsip = $prefs->get('lmsip') || '127.0.0.1';
 
 	my $shell = join('',
-		"SQUEEZELITE_BIN='$sq' exec '$py' -u '$bin' ",
+		"SQUEEZELITE_BIN='$sq' BRIDGE_STATE='$p->{'state'}' exec '$py' -u '$bin' ",
 		"'$p->{'name'}' '$p->{'mac'}' '$p->{'id'}' '$p->{'host'}' '$lmsip' ",
 		">> '$p->{'log'}' 2>&1 & echo \$! > '$p->{'pid'}'");
 

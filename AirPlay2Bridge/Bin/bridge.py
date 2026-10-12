@@ -4,16 +4,21 @@
 Based on cayco/cayco-squeezelite-airplay2-bridge (LMS-Raop issue #57 workaround).
 One process per HomePod. Managed by LMS plugin AirPlay2Bridge (variant B).
 Usage: bridge.py <player_name> <player_mac> <airplay_id> <homepod_ip> <lms_ip> [lms_cli_port]
+       bridge.py --scan    (mDNS discovery: TSV id<TAB>name<TAB>ip<TAB>model<TAB>os_version)
   airplay_id: device unique id (AA:BB:..:FF hex or 12-16 hex chars); empty => scan by IP only
+Env: BRIDGE_STATE=<file> — periodic key=value status (hp/dev/lms volume, streaming, ts)
+     for the LMS settings page; volume events FROM the device are intercepted too.
 """
 import array
 import asyncio
 import ipaddress
 import logging
 import os
+import re
 import signal
 import sys
 import time
+import urllib.parse
 
 import pyatv
 from pyatv.const import Protocol
@@ -21,6 +26,7 @@ from pyatv.conf import AppleTV, ManualService
 from pyatv.protocols.raop.audio_source import AudioSource
 import pyatv.protocols.raop as raop
 import pyatv.protocols.raop.audio_source as audio_source
+import pyatv.support.http as pyatv_http
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO").upper(),
                     format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
@@ -65,6 +71,62 @@ async def _my_open(source, sample_rate, channels, sample_size):
     return await _orig_open(source, sample_rate, channels, sample_size)
 raop.open_source = _my_open
 audio_source.open_source = _my_open
+
+# Status file for the LMS settings page (key=value lines, atomic replace).
+BRIDGE_STATE = os.environ.get("BRIDGE_STATE", "")
+
+# The bridge instance of THIS process (for the device-event hook below).
+_ACTIVE_BRIDGE = None
+
+# Some AirPlay receivers push RTSP REQUESTS on the sender's control connection,
+# e.g. SET_PARAMETER with body "volume: -15.000000" (dBFS) when the user changes
+# volume on the device (buttons/Siri) — RaopBridge calls this "volume feedback".
+# pyatv only parses RESPONSES and would choke on those bytes, so we hook its
+# parser: absorb complete device requests, report volume events to the bridge
+# and leave regular responses untouched.
+_DEVICE_REQ_RE = re.compile(rb"(SET_PARAMETER|TEARDOWN|OPTIONS|ANNOUNCE)[ \t]")
+_orig_parse_response = pyatv_http.parse_response
+
+
+def _handle_device_request(method, text):
+    bridge = _ACTIVE_BRIDGE
+    if method == "SET_PARAMETER":
+        m = re.search(r"^volume\s*:\s*(-?\d+(?:\.\d+)?)\s*$", text, re.I | re.M)
+        if m:
+            dbfs = float(m.group(1))          # -30..0 dBFS, same scale pyatv uses
+            pct = max(0.0, min(100.0, (dbfs + 30.0) * 100.0 / 30.0))
+            if bridge:
+                bridge.on_device_volume(pct, dbfs)
+            return
+    if bridge:
+        _LOGGER.info("%s: unexpected device request %s ignored", bridge.name, method)
+
+
+def _patched_parse_response(buffer):
+    while True:
+        if not _DEVICE_REQ_RE.match(buffer):
+            return _orig_parse_response(buffer)
+        head_end = buffer.find(b"\r\n\r\n")
+        if head_end < 0:
+            return (None, buffer)  # request header incomplete: wait for more bytes
+        clen = 0
+        for line in buffer[:head_end].split(b"\r\n")[1:]:
+            k, _, v = line.partition(b":")
+            if k.strip().lower() == b"content-length":
+                try:
+                    clen = int(v.strip() or b"0")
+                except ValueError:
+                    clen = 0
+        total = head_end + 4 + clen
+        if len(buffer) < total:
+            return (None, buffer)  # request body incomplete: wait for more bytes
+        msg = buffer[:total]
+        buffer = buffer[total:]
+        _handle_device_request(_DEVICE_REQ_RE.match(msg).group(1).decode("ascii"),
+                               msg.decode("iso-8859-1", "replace"))
+
+
+pyatv_http.parse_response = _patched_parse_response
 
 
 def le2be(chunk: bytes) -> bytes:
@@ -132,7 +194,11 @@ class HomePodBridge:
     def __init__(self, name, mac, airplay_id, host, lms_ip, lms_cli=9090):
         self.name = name
         self.mac = mac
-        self.mac_lms = mac.replace(":", "").lower()
+        self.mac_lms = mac.replace(":", "").lower()   # colonless (accepted in CLI commands)
+        self.mac_cli = mac.lower()                    # CLI player id: colons preserved
+        # LMS CLI url-encodes ':' in player ids (aa:aa:.. -> aa%3Aaa%3A..) in
+        # responses/notifications, so mixer events must match BOTH variants.
+        self.mac_variants = (self.mac_cli, urllib.parse.quote(self.mac_cli))
         self.airplay_id = airplay_id or None
         self.host = host
         self.lms_ip = lms_ip
@@ -142,17 +208,55 @@ class HomePodBridge:
         self.is_streaming = False
         self.current_volume = 30.0   # pyatv/HomePod scale (mapped from LMS by VOLUME_CURVE)
         self.lms_volume = None       # last LMS mixer % (raw)
+        self.device_volume = None    # last volume reported BY the device (events), %
+        self.vol_source = "bridge"   # 'bridge' = commanded | 'device' = reported by device
         self.audio_buffer = bytearray()
         self.last_audio_time = 0.0
         self.wake_event = asyncio.Event()
         self.proc = None   # squeezelite
         self.atv = None    # pyatv AppleTV
         self._cli_writer = None  # LMS CLI subscription (closed on stop)
+        global _ACTIVE_BRIDGE
+        _ACTIVE_BRIDGE = self
 
     def map_volume(self, lms_vol):
         """LMS mixer % -> pyatv/HomePod % (perceptual curve, see VOLUME_CURVE)."""
         v = max(0.0, min(100.0, float(lms_vol)))
         return 100.0 * (v / 100.0) ** VOLUME_CURVE
+
+    def on_device_volume(self, pct, dbfs):
+        """Volume change reported BY the device (buttons/Siri) — experimental."""
+        self.device_volume = pct
+        self.vol_source = "device"
+        drift = abs(pct - self.current_volume)
+        _LOGGER.info("%s: DEVICE volume event: %.1f%% (%.1f dBFS)%s", self.name, pct, dbfs,
+                     f" [drift {drift:.1f} vs bridge {self.current_volume:.1f}]"
+                     if drift > 2.0 else "")
+        self.write_state()
+
+    def write_state(self):
+        """Dump status for the LMS settings page (BRIDGE_STATE, key=value, atomic)."""
+        if not BRIDGE_STATE:
+            return
+        try:
+            tmp = BRIDGE_STATE + ".tmp"
+            with open(tmp, "w") as f:
+                f.write("name=%s\n" % self.name)
+                f.write("hp=%.1f\n" % self.current_volume)
+                f.write("lms=%s\n" % ("" if self.lms_volume is None else "%.1f" % self.lms_volume))
+                f.write("dev=%s\n" % ("" if self.device_volume is None else "%.1f" % self.device_volume))
+                f.write("src=%s\n" % self.vol_source)
+                f.write("streaming=%d\n" % (1 if self.is_streaming else 0))
+                f.write("ts=%d\n" % int(time.time()))
+            os.replace(tmp, BRIDGE_STATE)
+        except Exception as e:
+            _LOGGER.debug("%s: state write failed: %s", self.name, e)
+
+    async def state_loop(self):
+        """Heartbeat: refresh the state file so the settings page sees liveness."""
+        while self.running:
+            self.write_state()
+            await asyncio.sleep(5)
 
     # ---------- LMS CLI ----------
     async def lms_cli_open(self):
@@ -254,13 +358,16 @@ class HomePodBridge:
                 self.atv = await pyatv.connect(conf, asyncio.get_running_loop())
                 try:
                     await self.atv.audio.set_volume(self.current_volume)
-                    _LOGGER.info("%s: initial volume -> %.1f (device reports %.1f)",
-                                 self.name, self.current_volume, self.atv.audio.volume)
+                    self.device_volume = self.current_volume
+                    self.vol_source = "bridge"
+                    _LOGGER.info("%s: initial volume -> %.1f", self.name, self.current_volume)
+                    self.write_state()
                 except Exception as e:
                     _LOGGER.warning("%s: initial volume failed: %s", self.name, e)
                 source = RingBufferAudioSource(self)
                 self.is_streaming = True
                 _LOGGER.info("%s: AirPlay 2 streaming started", self.name)
+                self.write_state()
 
                 async def _enforce_volume():
                     for delay in (1.5, 4.0):
@@ -268,6 +375,9 @@ class HomePodBridge:
                         if self.is_streaming and self.atv:
                             try:
                                 await self.atv.audio.set_volume(self.current_volume)
+                                self.device_volume = self.current_volume
+                                self.vol_source = "bridge"
+                                self.write_state()
                             except Exception as ve:
                                 _LOGGER.debug("%s: volume re-send: %s", self.name, ve)
 
@@ -284,6 +394,7 @@ class HomePodBridge:
                 continue
             finally:
                 self.is_streaming = False
+                self.write_state()
                 if self.atv:
                     try:
                         self.atv.close()
@@ -309,15 +420,21 @@ class HomePodBridge:
                     if not line:
                         break
                     text = line.decode(errors="replace").strip()
-                    if text.startswith(self.mac_lms) and "mixer volume" in text:
+                    if (text.startswith(self.mac_variants[0]) or
+                            text.startswith(self.mac_variants[1])) and \
+                            "mixer volume" in text:
                         try:
                             vol = float(text.rsplit(" ", 1)[-1])
                             self.lms_volume = max(0.0, min(100.0, vol))
                             self.current_volume = self.map_volume(self.lms_volume)
+                            self.write_state()
                             if self.atv:
                                 await self.atv.audio.set_volume(self.current_volume)
+                                self.device_volume = self.current_volume
+                                self.vol_source = "bridge"
                                 _LOGGER.info("%s: volume=%.0f (lms=%.0f)",
                                              self.name, self.current_volume, self.lms_volume)
+                                self.write_state()
                         except ValueError:
                             pass
                 w.close()
@@ -330,7 +447,8 @@ class HomePodBridge:
         try:
             await asyncio.gather(self.drain_squeezelite_stdout(),
                                  self.run_airplay(),
-                                 self.sync_volume_lms())
+                                 self.sync_volume_lms(),
+                                 self.state_loop())
         finally:
             self.running = False
             self.is_streaming = False
@@ -350,6 +468,7 @@ class HomePodBridge:
         self.running = False
         self.is_idle = False
         self.wake_event.set()
+        self.write_state()
         if self.proc:
             try:
                 self.proc.terminate()
@@ -367,7 +486,24 @@ class HomePodBridge:
             pass
 
 
+async def do_scan():
+    """mDNS discovery for the settings page: TSV id<TAB>name<TAB>ip<TAB>model<TAB>os_version."""
+    devs = await pyatv.scan(asyncio.get_running_loop(), protocol=Protocol.RAOP, timeout=10)
+    for d in devs:
+        props = {}
+        for s in d.services:
+            if s.protocol == Protocol.RAOP:
+                props.update(s.properties or {})
+        print("\t".join([d.identifier or "", d.name or "", str(d.address),
+                         props.get("am", ""), props.get("ov", "")]), flush=True)
+    # zeroconf listeners can keep the process alive; hard-exit for the LMS caller
+    os._exit(0)
+
+
 async def main():
+    if len(sys.argv) >= 2 and sys.argv[1] == "--scan":
+        await do_scan()
+        return
     if len(sys.argv) < 6:
         print("Usage: bridge.py <name> <mac> <airplay_id> <homepod_ip> <lms_ip> [cli_port]", file=sys.stderr)
         sys.exit(2)

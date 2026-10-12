@@ -44,6 +44,26 @@ AIRPLAY2BRIDGE_DEV_MODEL
 	ru	Модель
 	en	Model
 
+AIRPLAY2BRIDGE_DEV_VOLUME
+	ru	Громкость
+	en	Volume
+
+AIRPLAY2BRIDGE_VOL_DEAD
+	ru	мост не работает
+	en	bridge not running
+
+AIRPLAY2BRIDGE_VOL_NOSTREAM
+	ru	нет данных
+	en	no data yet
+
+AIRPLAY2BRIDGE_VOL_UPDATED
+	ru	обновлено
+	en	updated
+
+AIRPLAY2BRIDGE_VOLUME_NOTE
+	ru	Громкость HomePod, установленная мостом из громкости LMS (кривая VOLUME_CURVE). Значение с знаком ◎ приходит от самого устройства (кнопки/Siri). В режиме простоя показывается последнее известное значение со временем обновления.
+	en	HomePod volume set by the bridge from the LMS volume (VOLUME_CURVE curve). A value marked with ◎ is reported by the device itself (buttons/Siri). When idle, the last known value is shown with its update time.
+
 AIRPLAY2BRIDGE_DEV_OFFLINE
 	ru	(не найден при последнем скане)
 	en	(not seen in last scan)

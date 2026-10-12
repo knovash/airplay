@@ -30,6 +30,7 @@
 				<th style="text-align:left; padding:2px 6px">AirPlay ID</th>
 				<th style="text-align:left; padding:2px 6px">MAC</th>
 				<th style="text-align:left; padding:2px 6px">[% 'AIRPLAY2BRIDGE_DEV_MODEL' | string %]</th>
+				<th style="text-align:left; padding:2px 6px">[% 'AIRPLAY2BRIDGE_DEV_VOLUME' | string %]</th>
 			</tr>
 			[% FOREACH d IN devices %]
 			<tr [% IF d.absent %]style="color:#999"[% END %]>
@@ -47,9 +48,28 @@
 				<td style="padding:2px 6px">[% d.id %]</td>
 				<td style="padding:2px 6px">[% d.mac %]</td>
 				<td style="padding:2px 6px">[% d.model %][% IF d.ov %] (OS [% d.ov %])[% END %]</td>
+				<td style="padding:2px 6px" nowrap="nowrap">
+					[% IF !d.enabled %]
+						<span class="prefDesc">&mdash;</span>
+					[% ELSIF !d.bridgealive %]
+						<span style="color:#c00">[% 'AIRPLAY2BRIDGE_VOL_DEAD' | string %]</span>
+					[% ELSIF d.vol != '' %]
+						[% IF d.streaming AND d.volage < 15 %]
+							<span style="color:#080"><b>[% d.vol %]%</b></span>
+						[% ELSE %]
+							<span>[% d.vol %]%</span>
+						[% END %]
+						[% IF d.volsrc == 'device' %]<span style="color:#08c" title="reported by device">&#9678;</span>[% END %]
+						[% IF d.lmsvol != '' %] <span class="prefDesc">(LMS [% d.lmsvol %]%)</span>[% END %]
+						[% UNLESS d.streaming %] <span class="prefDesc">([% 'AIRPLAY2BRIDGE_VOL_UPDATED' | string %] [% d.voltime %])</span>[% END %]
+					[% ELSE %]
+						<span class="prefDesc">[% 'AIRPLAY2BRIDGE_VOL_NOSTREAM' | string %]</span>
+					[% END %]
+				</td>
 			</tr>
 			[% END %]
 		</table>
+		<p class="prefDesc">[% 'AIRPLAY2BRIDGE_VOLUME_NOTE' | string %]</p>
 		[% ELSE %]
 		<p><span class="prefDesc">[% 'AIRPLAY2BRIDGE_NO_DEVICES' | string %]</span></p>
 		[% END %]

@@ -5,9 +5,14 @@ package Plugins::AirPlay2Bridge::Settings;
 # Данные: pref devices = TSV-строки "id\tname\tip\tmac\tenabled\tmodel\tov".
 #   MAC никогда не генерируется заново для известного id (наследование плейлистов
 #   RaopBridge). pref players (формат BridgeProcess) генерируется из devices при Save.
+# Громкость: bridge.py пишет key=value статус в <cache>/AirPlay2Bridge/bridge-<macid>.state
+#   (hp=установленная мостом HomePod %, dev=сообщённая устройством %, lms=LMS %,
+#    src=bridge|device, streaming=0|1, ts=epoch); здесь читаем его + pid-проверку моста.
 
 use strict;
 use base qw(Slim::Web::Settings);
+
+use File::Spec::Functions qw(catfile);
 
 use Slim::Utils::Log;
 use Slim::Utils::PluginManager;
@@ -133,6 +138,66 @@ sub _mergeScan {
 	$prefs->set('devices', _devicesToStr($devs));
 	return $devs;
 }
+
+# ---------- bridge status (громкость/стрим из state-файлов bridge.py) ----------
+
+sub _readState {
+	my ($macid) = @_;
+	my %st;
+	my $file = catfile(Plugins::AirPlay2Bridge::BridgeProcess::dataDir(), "bridge-$macid.state");
+	return \%st unless -e $file;
+	open my $fh, '<', $file or return \%st;
+	while (my $l = <$fh>) {
+		chomp $l;
+		# NB: captures MUST go into named vars — a second regex in the
+		# condition would clobber the globals $1/$2.
+		my ($k, $v) = $l =~ /^([a-z]+)=(.*)$/;
+		next unless defined $k;
+		$st{$k} = $v if $k =~ /^(name|hp|lms|dev|src|streaming|ts)$/;
+	}
+	close $fh;
+	return \%st;
+}
+
+# прикрепить к каждому устройству громкость/статус из state-файла + живость моста
+sub _attachStatus {
+	my ($devs) = @_;
+	require Plugins::AirPlay2Bridge::BridgeProcess;
+	my $bp = 'Plugins::AirPlay2Bridge::BridgeProcess';
+	my %alive = map { $_->{macid} => 1 }
+		grep { $bp->alive($_) } @{ $bp->playerList() };
+
+	for my $d (@$devs) {
+		(my $macid = lc($d->{mac} // '')) =~ s/://g;
+		my $st = _readState($macid);
+
+		$d->{bridgealive} = $alive{$macid} ? 1 : 0;
+		$d->{vol}    = '';
+		$d->{lmsvol} = '';
+		$d->{volsrc} = '';
+		$d->{voltime} = '';
+		$d->{volage}  = 999999;
+		$d->{streaming} = ($st->{streaming} // '0') eq '1' ? 1 : 0;
+
+		# «лучшее известное» значение: событие от устройства > команда моста
+		if (defined $st->{dev} && $st->{dev} ne '' && ($st->{src} // '') eq 'device') {
+			$d->{vol} = sprintf('%.0f', $st->{dev});
+			$d->{volsrc} = 'device';
+		}
+		elsif (defined $st->{hp} && $st->{hp} ne '') {
+			$d->{vol} = sprintf('%.0f', $st->{hp});
+			$d->{volsrc} = 'bridge';
+		}
+		$d->{lmsvol} = sprintf('%.0f', $st->{lms}) if defined $st->{lms} && $st->{lms} ne '';
+
+		if (defined $st->{ts} && $st->{ts} =~ /^\d+$/) {
+			$d->{volage} = time() - $st->{ts};
+			my @t = localtime($st->{ts});
+			$d->{voltime} = sprintf('%02d:%02d:%02d', $t[2], $t[1], $t[0]);
+		}
+	}
+}
+
 sub handler {
 	my ($class, $client, $paramRef, $callback, @args) = @_;
 
@@ -215,6 +280,7 @@ sub handler {
 	for my $d (@$devs) {
 		$d->{warn} = 1 if $d->{enabled} && $lmsnames{lc($d->{name})};
 	}
+	_attachStatus($devs);
 	$paramRef->{'devices'} = $devs;
 	$paramRef->{'devcount'} = scalar @$devs;
 
